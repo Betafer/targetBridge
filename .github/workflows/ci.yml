@@ -1,15 +1,20 @@
-name: CI Build Verification
+name: PR 226 isolated validation
 
+# Fork-only validation of the exact public PR commit. No release or deployment.
 on:
   push:
-    branches: [ main, 3.1-maint, maint-3.5, maint-3.6, 3.2-dev, dev-3.3.0, dev-3.4.0, dev-3.6.0 ]
-  pull_request:
-    branches: [ main, 3.1-maint, maint-3.5, maint-3.6, 3.2-dev, dev-3.3.0, dev-3.4.0, dev-3.6.0 ]
+    branches: [ codex/ci-pr226-20261024 ]
+
+permissions:
+  contents: read
 
 jobs:
   build-sender:
     name: Build Sender (${{ matrix.os }} - ${{ matrix.arch }})
+    timeout-minutes: 25
     strategy:
+      fail-fast: false
+      max-parallel: 2
       matrix:
         include:
           - os: macos-15-intel
@@ -20,6 +25,12 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
+        with:
+          ref: aff146e4f72b46b3ad4fa5a5525a15e8cf989992
+          persist-credentials: false
+
+      - name: Verify exact PR source
+        run: test "$(git rev-parse HEAD)" = "aff146e4f72b46b3ad4fa5a5525a15e8cf989992"
 
       - name: Install Tools
         run: |
@@ -35,6 +46,9 @@ jobs:
           ./scripts/build_targetbridge_sender_app.sh
           file ../build/TargetBridge.app/Contents/MacOS/TargetBridge | grep -q "${{ matrix.arch }}"
 
+      - name: Check Retina 16x10 Geometry
+        run: python3 TargetBridge-Sender/scripts/test_retina_16x10.py . "$RUNNER_TEMP/retina-16x10"
+
       - name: Run Sender Unit Tests
         run: |
           cd TargetBridge-Sender
@@ -48,7 +62,10 @@ jobs:
 
   build-receiver:
     name: Build Receiver (${{ matrix.os }} - ${{ matrix.arch }})
+    timeout-minutes: 25
     strategy:
+      fail-fast: false
+      max-parallel: 2
       matrix:
         include:
           - os: macos-15-intel
@@ -59,6 +76,12 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
+        with:
+          ref: aff146e4f72b46b3ad4fa5a5525a15e8cf989992
+          persist-credentials: false
+
+      - name: Verify exact PR source
+        run: test "$(git rev-parse HEAD)" = "aff146e4f72b46b3ad4fa5a5525a15e8cf989992"
 
       - name: Install Dependencies
         run: |
